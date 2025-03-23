@@ -86,6 +86,7 @@ class WsSeverApplicationTests {
     void testRedis(){
         stringRedisTemplate.opsForValue().set("test","test");
         assertEquals("test",stringRedisTemplate.opsForValue().get("test"));
+        System.out.println(stringRedisTemplate.opsForGeo().position("vehicle:locations","vehicle-001"));
 
     }
 }
