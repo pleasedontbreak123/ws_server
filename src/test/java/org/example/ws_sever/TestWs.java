@@ -18,7 +18,7 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 public class TestWs {
-    private static final String WS_URL = "ws://localhost:8080/ws";
+    private static final String WS_URL = "ws://118.190.154.246:10086/ws";
     private static final ObjectMapper objectMapper;
 
     static {

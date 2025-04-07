@@ -1,10 +1,12 @@
 package org.example.ws_sever.service.impl;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.example.ws_sever.entity.dto.MessageDTO;
 import org.example.ws_sever.entity.vo.MessageVO;
 import org.example.ws_sever.service.MessageBroadcastService;
+import org.example.ws_sever.utils.AiClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.geo.*;
 import org.springframework.data.redis.connection.RedisGeoCommands;
@@ -13,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
+import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -24,6 +27,9 @@ public class MessageBroadcastServiceImpl implements MessageBroadcastService {
     
     @Autowired
     private StringRedisTemplate stringRedisTemplate;
+
+    @Autowired
+    private AiClient aiClient;
     
     @Autowired
     private ObjectMapper objectMapper;
@@ -39,27 +45,31 @@ public class MessageBroadcastServiceImpl implements MessageBroadcastService {
      * @param radius  半径
      */
     @Override
-    public void broadcast(double longitude, double latitude, double radius) {
+    public void broadcast(double longitude, double latitude, double radius) throws IOException {
         Circle circle = new Circle(new Point(longitude, latitude), 
                                  new Distance(radius, Metrics.KILOMETERS));
         
         GeoResults<RedisGeoCommands.GeoLocation<String>> results = 
             stringRedisTemplate.opsForGeo().radius(GEO_KEY, circle);
 
+        log.info(results.toString());
+
         if (results != null) {
             for (GeoResult<RedisGeoCommands.GeoLocation<String>> result : results) {
                 String vehicleId = result.getContent().getName();
+                log.info("用户是"+vehicleId);
                 double distance = result.getDistance().getValue();
 
-                String aiRecommendation = "AI推荐：";
+                String aiRecommendation = "AI"+aiClient.getChatGPTResponse(results,result) ;
 
                 MessageDTO.Location location = new MessageDTO.Location(longitude, latitude);
                 MessageVO message = new MessageVO(location, distance,aiRecommendation);
+                String messageJosn = objectMapper.writeValueAsString(message);
 
 
                 try {
                     String userId = vehicleId.split("-")[1];
-                    sendToUser(Integer.parseInt(userId), message.toString());
+                    sendToUser(Integer.parseInt(userId), messageJosn);
                     log.info("已向车辆 {} 发送消息，距离 {} 公里", vehicleId, String.format("%.2f", distance));
                 } catch (Exception e) {
                     log.error("发送消息失败: {}", e.getMessage());

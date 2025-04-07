@@ -1,6 +1,789 @@
-<html>
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>大数据可视化系统</title>
+    <script src="js/echarts.js"></script>
+    <script charset="utf-8" src="https://map.qq.com/api/gljs?v=1.exp&key=JVUBZ-DG6K7-XJIXK-PHGBI-RIHRO-B4FT4&libraries=visualization"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            background-color: #001529;
+            color: #fff;
+            font-family: "Microsoft YaHei", sans-serif;
+            background-image: 
+                radial-gradient(circle at 50% 50%, rgba(0,150,255,0.1) 0%, transparent 50%),
+                linear-gradient(rgba(0,21,41,0.95) 0%, rgba(0,21,41,0.98) 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1920px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .header {
+            text-align: center;
+            position: relative;
+            padding: 20px 0;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            color: #fff;
+            font-size: 36px;
+            margin: 0;
+            text-shadow: 0 0 10px rgba(0,150,255,0.5);
+            letter-spacing: 4px;
+            position: relative;
+            display: inline-block;
+        }
+
+        .header h1::before,
+        .header h1::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            width: 100px;
+            height: 2px;
+            background: linear-gradient(90deg, rgba(0,150,255,0) 0%, rgba(0,150,255,1) 50%, rgba(0,150,255,0) 100%);
+            transform: translateY(-50%);
+        }
+
+        .header h1::before {
+            right: 120%;
+        }
+
+        .header h1::after {
+            left: 120%;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: 300px 1fr 300px;
+            grid-template-rows: repeat(3, 300px);
+            gap: 20px;
+            padding: 20px;
+            position: relative;
+            max-width: 1920px;
+            margin: 0 auto;
+        }
+
+        .panel {
+            background: rgba(0,21,41,0.7);
+            border: 1px solid rgba(0,150,255,0.3);
+            border-radius: 4px;
+            padding: 20px;
+            position: relative;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0,150,255,0.2);
+        }
+
+        .panel::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, 
+                rgba(0,150,255,0) 0%, 
+                rgba(0,150,255,1) 50%, 
+                rgba(0,150,255,0) 100%);
+        }
+
+        .panel::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 30px;
+            height: 30px;
+            border-top: 2px solid rgba(0,150,255,0.5);
+            border-right: 2px solid rgba(0,150,255,0.5);
+        }
+
+        .panel-title {
+            color: #0096ff;
+            font-size: 16px;
+            margin-bottom: 15px;
+            padding-left: 20px;
+            position: relative;
+            flex: none;
+        }
+
+        .panel-title::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            width: 4px;
+            height: 18px;
+            background: #0096ff;
+            transform: translateY(-50%);
+        }
+
+        .panel-title::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: linear-gradient(90deg, 
+                rgba(0,150,255,0.5) 0%, 
+                transparent 100%);
+            margin-left: 15px;
+        }
+
+        .chart {
+            flex: 1;
+            width: 100%;
+            min-height: 0; /* 防止图表溢出 */
+        }
+
+        .chart::before {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 40%;
+            background: linear-gradient(180deg, 
+                transparent 0%, 
+                rgba(0,150,255,0.05) 100%);
+            pointer-events: none;
+        }
+
+        .digital-number {
+            font-family: 'Digital-7', sans-serif;
+            color: #0096ff;
+            font-size: 32px;
+            text-align: center;
+            margin: 10px 0;
+            text-shadow: 0 0 10px rgba(0,150,255,0.3);
+            animation: glow 1.5s ease-in-out infinite alternate;
+            flex: none;
+        }
+
+        .map-container {
+            grid-column: span 2;
+            grid-row: span 2;
+        }
+
+        @keyframes glow {
+            from {
+                text-shadow: 0 0 5px rgba(0,150,255,0.2),
+                            0 0 10px rgba(0,150,255,0.2),
+                            0 0 15px rgba(0,150,255,0.2);
+            }
+            to {
+                text-shadow: 0 0 10px rgba(0,150,255,0.4),
+                            0 0 20px rgba(0,150,255,0.4),
+                            0 0 30px rgba(0,150,255,0.4);
+            }
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,21,41,0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            transition: opacity 0.5s ease;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid transparent;
+            border-top-color: #0096ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .corner-decoration {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            pointer-events: none;
+        }
+
+        .corner-decoration::before,
+        .corner-decoration::after {
+            content: '';
+            position: absolute;
+            background: linear-gradient(45deg, rgba(0,150,255,0.3), transparent);
+        }
+
+        .corner-decoration::before {
+            width: 2px;
+            height: 100%;
+        }
+
+        .corner-decoration::after {
+            width: 100%;
+            height: 2px;
+        }
+
+        .top-left {
+            top: 0;
+            left: 0;
+        }
+
+        .top-right {
+            top: 0;
+            right: 0;
+            transform: rotate(90deg);
+        }
+
+        .bottom-left {
+            bottom: 0;
+            left: 0;
+            transform: rotate(-90deg);
+        }
+
+        .bottom-right {
+            bottom: 0;
+            right: 0;
+            transform: rotate(180deg);
+        }
+
+        /* 数字统计面板 */
+        .stats-panel {
+            grid-column: 1;
+            grid-row: 1;
+        }
+
+        /* 地图面板 */
+        .map-panel {
+            grid-column: 2;
+            grid-row: 1 / span 3;
+        }
+
+        /* 分布占比面板 */
+        .distribution-panel {
+            grid-column: 3;
+            grid-row: 1;
+        }
+
+        /* 排名面板 */
+        .ranking-panel {
+            grid-column: 1;
+            grid-row: 2;
+        }
+
+        /* 增长指标面板 */
+        .growth-panel {
+            grid-column: 3;
+            grid-row: 2;
+        }
+
+        @media screen and (max-width: 1600px) {
+            .dashboard {
+                grid-template-columns: 250px 1fr 250px;
+                grid-template-rows: repeat(3, 250px);
+            }
+        }
+
+        @media screen and (max-width: 1200px) {
+            .dashboard {
+                grid-template-columns: 200px 1fr 200px;
+                grid-template-rows: repeat(3, 200px);
+                gap: 15px;
+            }
+            .panel-title {
+                font-size: 14px;
+                margin-bottom: 10px;
+            }
+            .digital-number {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
 <body>
-<h1>hello word!!!</h1>
-<p>this is a html page</p>
+    <div class="loading-overlay">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <div class="container">
+        <div class="corner-decoration top-left"></div>
+        <div class="corner-decoration top-right"></div>
+        <div class="corner-decoration bottom-left"></div>
+        <div class="corner-decoration bottom-right"></div>
+
+        <div class="header">
+            <h1>大数据可视化系统</h1>
+        </div>
+        
+        <div class="dashboard">
+            <!-- 数字统计面板 -->
+            <div class="panel stats-panel">
+                <div class="panel-title">数据统计</div>
+                <div class="digital-number" id="totalAmount">8,933,395</div>
+                <div id="conversionChart" class="chart"></div>
+            </div>
+            
+            <!-- 地图面板 -->
+            <div class="panel map-panel">
+                <div class="panel-title">区域分布图</div>
+                <div id="mapChart" class="chart"></div>
+            </div>
+            
+            <!-- 环形图面板 -->
+            <div class="panel distribution-panel">
+                <div class="panel-title">分布占比</div>
+                <div id="pieChart" class="chart"></div>
+            </div>
+            
+            <!-- 排名面板 -->
+            <div class="panel ranking-panel">
+                <div class="panel-title">数据排名</div>
+                <div id="rankChart" class="chart"></div>
+            </div>
+            
+            <!-- 增长指标面板 -->
+            <div class="panel growth-panel">
+                <div class="panel-title">增长指标</div>
+                <div id="gaugeChart" class="chart"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 页面加载动画
+        window.addEventListener('load', function() {
+            setTimeout(function() {
+                document.querySelector('.loading-overlay').style.opacity = '0';
+                setTimeout(function() {
+                    document.querySelector('.loading-overlay').style.display = 'none';
+                }, 500);
+            }, 1000);
+        });
+
+        // 图表主题颜色
+        const themeColors = {
+            primary: '#0096ff',
+            success: '#00ff9d',
+            warning: '#ffb800',
+            danger: '#ff4d4f',
+            info: '#00e4ff',
+            background: 'rgba(0,21,41,0.7)',
+            textColor: '#fff',
+            axisLineColor: 'rgba(255,255,255,0.1)',
+            splitLineColor: 'rgba(255,255,255,0.05)'
+        };
+
+        // 通用图表配置
+        const commonConfig = {
+            backgroundColor: 'transparent',
+            textStyle: {
+                color: themeColors.textColor
+            },
+            title: {
+                textStyle: {
+                    color: themeColors.textColor,
+                    fontSize: 16,
+                    fontWeight: 'normal'
+                }
+            },
+            tooltip: {
+                backgroundColor: 'rgba(0,21,41,0.9)',
+                borderColor: themeColors.primary,
+                textStyle: {
+                    color: themeColors.textColor
+                },
+                axisPointer: {
+                    type: 'line',
+                    lineStyle: {
+                        color: themeColors.primary
+                    }
+                }
+            }
+        };
+
+        let charts = {};
+
+        function initMap() {
+            const center = new TMap.LatLng(39.98412, 116.307484); // 固定中心点
+
+            const map = new TMap.Map("mapChart", {
+                center,
+                zoom: 10,
+                viewMode: '3D',
+                disableDefaultUI: true // 可选：隐藏默认控件
+            });
+
+            const heat = new TMap.visualization.Heat({
+                map,
+                data: [
+                    { lat: 39.98412, lng: 116.307484, count: 10 },
+                    { lat: 39.98414, lng: 116.307487, count: 30 },
+                    { lat: 39.98416, lng: 116.307490, count: 50 }
+                ],
+                radius: 20,
+                gradient: {
+                    0.25: "#0096ff",
+                    0.55: "#00ff9d",
+                    0.85: "#ffb800",
+                    1.0: "#ff4d4f"
+                }
+            });
+
+            // 监听地图操作后强制恢复中心
+            const keepCenter = () => map.setCenter(center);
+
+            map.on("dragend", keepCenter);
+            map.on("zoom_changed", keepCenter);
+        }
+
+        // 转化率图表
+        function initConversionChart() {
+            const chart = echarts.init(document.getElementById('conversionChart'));
+            const option = {
+                ...commonConfig,
+                grid: {
+                    left: '5%',
+                    right: '5%',
+                    top: '10%',
+                    bottom: '10%',
+                    containLabel: true
+                },
+                xAxis: {
+                    show: false
+                },
+                yAxis: {
+                    show: false
+                },
+                series: [{
+                    type: 'bar',
+                    data: [97],
+                    barWidth: '40%',
+                    itemStyle: {
+                        color: {
+                            type: 'linear',
+                            x: 0,
+                            y: 0,
+                            x2: 1,
+                            y2: 0,
+                            colorStops: [{
+                                offset: 0,
+                                color: themeColors.primary
+                            }, {
+                                offset: 1,
+                                color: themeColors.info
+                            }]
+                        },
+                        borderRadius: [4, 4, 4, 4]
+                    },
+                    label: {
+                        show: true,
+                        position: 'right',
+                        formatter: '{c}%',
+                        color: themeColors.textColor,
+                        fontSize: 20,
+                        fontWeight: 'bold'
+                    },
+                    showBackground: true,
+                    backgroundStyle: {
+                        color: 'rgba(255, 255, 255, 0.05)',
+                        borderRadius: [4, 4, 4, 4]
+                    }
+                }]
+            };
+            chart.setOption(option);
+            charts.conversion = chart;
+        }
+
+        // 饼图
+        function initPieChart() {
+            const chart = echarts.init(document.getElementById('pieChart'));
+            const option = {
+                ...commonConfig,
+                tooltip: {
+                    trigger: 'item',
+                    formatter: '{a} <br/>{b}: {c} ({d}%)'
+                },
+                legend: {
+                    orient: 'vertical',
+                    right: '5%',
+                    top: 'center',
+                    textStyle: {
+                        color: themeColors.textColor
+                    },
+                    itemWidth: 10,
+                    itemHeight: 10,
+                    itemGap: 20
+                },
+                series: [{
+                    name: '分布占比',
+                    type: 'pie',
+                    radius: ['50%', '70%'],
+                    center: ['40%', '50%'],
+                    avoidLabelOverlap: true,
+                    itemStyle: {
+                        borderColor: themeColors.background,
+                        borderWidth: 2
+                    },
+                    label: {
+                        show: false
+                    },
+                    emphasis: {
+                        label: {
+                            show: true,
+                            fontSize: '14',
+                            fontWeight: 'bold'
+                        },
+                        itemStyle: {
+                            shadowBlur: 10,
+                            shadowOffsetX: 0,
+                            shadowColor: 'rgba(0, 0, 0, 0.5)'
+                        }
+                    },
+                    labelLine: {
+                        show: false
+                    },
+                    data: [{
+                        value: 28,
+                        name: 'Legend A',
+                        itemStyle: { color: themeColors.primary }
+                    }, {
+                        value: 76,
+                        name: 'Legend B',
+                        itemStyle: { color: themeColors.success }
+                    }, {
+                        value: 40,
+                        name: 'Legend C',
+                        itemStyle: { color: themeColors.warning }
+                    }, {
+                        value: 40,
+                        name: 'Legend D',
+                        itemStyle: { color: themeColors.danger }
+                    }]
+                }]
+            };
+            chart.setOption(option);
+            charts.pie = chart;
+        }
+
+        // 排名图表
+        function initRankChart() {
+            const chart = echarts.init(document.getElementById('rankChart'));
+            const option = {
+                ...commonConfig,
+                grid: {
+                    left: '15%',
+                    right: '15%',
+                    top: '10%',
+                    bottom: '10%',
+                    containLabel: true
+                },
+                xAxis: {
+                    type: 'value',
+                    show: false
+                },
+                yAxis: {
+                    type: 'category',
+                    data: ['Name 05', 'Name 04', 'Name 03', 'Name 02', 'Name 01'],
+                    axisLine: { show: false },
+                    axisTick: { show: false },
+                    axisLabel: {
+                        color: themeColors.textColor,
+                        fontSize: 12
+                    }
+                },
+                series: [{
+                    type: 'bar',
+                    data: [95, 80, 70, 60, 50],
+                    barWidth: '40%',
+                    itemStyle: {
+                        color: function(params) {
+                            const colorList = [
+                                themeColors.primary,
+                                themeColors.success,
+                                themeColors.warning,
+                                themeColors.info,
+                                themeColors.danger
+                            ];
+                            return {
+                                type: 'linear',
+                                x: 0,
+                                y: 0,
+                                x2: 1,
+                                y2: 0,
+                                colorStops: [{
+                                    offset: 0,
+                                    color: colorList[params.dataIndex]
+                                }, {
+                                    offset: 1,
+                                    color: colorList[params.dataIndex].replace('ff', '80')
+                                }]
+                            };
+                        },
+                        borderRadius: [0, 4, 4, 0]
+                    },
+                    label: {
+                        show: true,
+                        position: 'right',
+                        color: themeColors.textColor,
+                        fontSize: 12
+                    }
+                }]
+            };
+            chart.setOption(option);
+            charts.rank = chart;
+        }
+
+        // 仪表盘
+        function initGaugeChart() {
+            const chart = echarts.init(document.getElementById('gaugeChart'));
+            const option = {
+                ...commonConfig,
+                series: [{
+                    type: 'gauge',
+                    radius: '90%',
+                    startAngle: 180,
+                    endAngle: 0,
+                    min: 0,
+                    max: 100,
+                    splitNumber: 10,
+                    axisLine: {
+                        lineStyle: {
+                            width: 20,
+                            color: [
+                                [0.3, themeColors.danger],
+                                [0.7, themeColors.warning],
+                                [1, themeColors.success]
+                            ]
+                        }
+                    },
+                    pointer: {
+                        icon: 'path://M12.8,0.7l12,40.1H0.7L12.8,0.7z',
+                        length: '60%',
+                        width: 6,
+                        offsetCenter: [0, '10%'],
+                        itemStyle: {
+                            color: themeColors.primary
+                        }
+                    },
+                    axisTick: {
+                        length: 6,
+                        lineStyle: {
+                            color: 'auto',
+                            width: 1
+                        }
+                    },
+                    splitLine: {
+                        length: 10,
+                        lineStyle: {
+                            color: 'auto',
+                            width: 2
+                        }
+                    },
+                    axisLabel: {
+                        color: themeColors.textColor,
+                        fontSize: 12,
+                        distance: -30
+                    },
+                    detail: {
+                        valueAnimation: true,
+                        formatter: '{value}%',
+                        color: themeColors.textColor,
+                        fontSize: 24,
+                        fontWeight: 'bold',
+                        offsetCenter: [0, '50%']
+                    },
+                    data: [{
+                        value: 36,
+                        name: '增长率',
+                        title: {
+                            offsetCenter: [0, '80%']
+                        }
+                    }],
+                    title: {
+                        fontSize: 14,
+                        color: themeColors.textColor
+                    }
+                }]
+            };
+            chart.setOption(option);
+            charts.gauge = chart;
+        }
+
+        // 添加鼠标移动效果
+        document.addEventListener('mousemove', function(e) {
+            const panels = document.querySelectorAll('.panel');
+            panels.forEach(panel => {
+                const rect = panel.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                if (x > 0 && x < rect.width && y > 0 && y < rect.height) {
+                    const xPercent = ((x / rect.width) - 0.5) * 20;
+                    const yPercent = ((y / rect.height) - 0.5) * 20;
+                    panel.style.transform = `perspective(1000px) rotateX(${-yPercent}deg) rotateY(${xPercent}deg) translateZ(10px)`;
+                } else {
+                    panel.style.transform = 'none';
+                }
+            });
+        });
+
+        // 在图表初始化函数中添加延迟重绘
+        function initCharts() {
+            initMap();
+            setTimeout(() => {
+                initConversionChart();
+                initPieChart();
+                initRankChart();
+                initGaugeChart();
+                // 触发一次resize以确保图表正确渲染
+                Object.values(charts).forEach(chart => {
+                    chart?.resize();
+                });
+            }, 100);
+        }
+
+        // 页面加载完成后初始化图表
+        window.addEventListener('load', initCharts);
+
+        // 优化resize处理
+        let resizeTimeout;
+        window.addEventListener('resize', function() {
+            if (resizeTimeout) {
+                clearTimeout(resizeTimeout);
+            }
+            resizeTimeout = setTimeout(() => {
+                Object.values(charts).forEach(chart => {
+                    chart?.resize();
+                });
+            }, 100);
+        });
+    </script>
 </body>
 </html>

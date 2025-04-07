@@ -22,3 +22,12 @@ spring:
         max-idle: 8
         min-idle: 0
         max-wait: 1000
+
+#ai:
+#  api:
+#    key: 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
+
+#    sk-797a280bbeb04d65903b135361e99782
+
+
+#    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
